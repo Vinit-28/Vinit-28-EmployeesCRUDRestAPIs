@@ -1,9 +1,10 @@
+// Importing Dependencies //
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const {UsersModel} = require("../Models/usersModel");
 const saltRounds = 10;
 
-
+// APIs //
 const register = (req, res)=>{
     const {username, password, description} = req.body;
     if( !username || !password ){
