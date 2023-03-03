@@ -54,7 +54,7 @@ const login = (req, res)=>{
                     description: user.description
                 }, process.env.JWT_SECRET, {expiresIn:'1h', issuer:process.env.JWT_ISSUER});
                 res.cookie('token', authToken, {httpOnly:true, maxAge:60*60*60});
-                res.cookie('username', username, {httpOnly:true, maxAge:60*60*60});
+                // res.cookie('username', username, {httpOnly:true, maxAge:60*60*60});
                 res.status(200).json({authToken});
             }
             else{
