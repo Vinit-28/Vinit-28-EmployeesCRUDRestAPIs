@@ -5,12 +5,12 @@ const DB_CONNECTION = require('../Configs/DB_Connection').getDBConnectionObject(
 const UsersSchema = new mongoose.Schema({
     username: {
         type: String,
-        required: true,
+        required: [true, 'Username is required.'],
         unique: true
     },
     password: {
         type: String,
-        required: true
+        required: [true, "Password can't be empty"]
     },
     description: {
         type: String,

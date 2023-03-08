@@ -1,47 +1,26 @@
 // Importing Dependencies //
 const {EmployeesModel} = require('../Models/employeesModel');
-
+const {employeeModelErrorHandler} = require('../ErrorHandlers/validationErrorHandler');
 
 
 // APIs //
 const getEmployee = async (req, res)=>{
     let email = req.body.email || '', name = req.body.name || '';
-    console.log(email, name)
     let data = await EmployeesModel.find({$or:[{name:name}, {email:email}]}).exec();
     return res.status(200).json(data);
 };
 
 
 const getAllEmployee = async (req, res)=>{
-    // Note* : Model.find() // returns a query object, if we call queryObject.getFilter() it will returns us the query filter that we passed. And if we call queryObject.exec(callback) it will execute the query. //
-
-    // Using Async-Await //
-    // let data = await EmployeesModel.find({}, {_id:false, name:true, email:true, salary:true});
-    // res.status(200).json(data);
-
-    // Using Callback //
-    // EmployeesModel.find({}, {_id:false, name:true, email:true, salary:true}).exec((err, data)=>{
-    //     if( err ){
-    //         res.status(501).json({"Message":`Some Internal Error: ${err}.`});
-    //     }
-    //     else{
-    //         res.status(200).json(data);
-    //     }
-    // });
-
-    // Using Promises(then & catch) //
     EmployeesModel.find({}, {_id:false, name:true, email:true, salary:true})
     .then(data=>{res.status(200).json(data);})
-    .catch(err=>{res.status(501).json({"Message":`Some Internal Error: ${err}.`});});
+    .catch((err)=>{
+        handleValidationError(err, res);
+    });
 };
 
 
 const addEmployee = (req, res)=>{
-    if( !req.body.name || !req.body.salary || !req.body.department || !req.body.email ){
-        res.status(200).json({"Message":`Employee details are required.`});
-        return;
-    }
-    // let employeeID = employeeDB.length>=1 ? employeeDB[employeeDB.length-1].id+1 : 1;
     const newEmployee = new EmployeesModel({
         name: req.body.name,
         email: req.body.email,
@@ -50,12 +29,14 @@ const addEmployee = (req, res)=>{
     });
     newEmployee.save()
     .then(empObj=>{res.status(200).json(empObj)})
-    .catch(err=>{res.status(406).json({"Message":`Error Occured : ${err}`})});
+    .catch((err)=>{
+        employeeModelErrorHandler(err, res);
+    });
 };
 
 
 const updateEmployee = (req, res) => {
-    let {name, email, salary, department} = req.body;
+    let {name, email, salary, department, newEmail} = req.body;
     if( !email ){
         res.status(400).json({"Message":`Please provide employee's email id.`});
         return;
@@ -67,17 +48,24 @@ const updateEmployee = (req, res) => {
     let filter = {email};
     EmployeesModel.findOne(filter)
     .then(employee=>{
-        if(!employee) throw new Error("Email id doesn't exists.");
+        if(!employee){
+            let err = new Error("Email id doesn't exists.");
+            err.isCustomError = true;
+            throw err;
+        } 
+        employee.email = newEmail || employee.email;
         employee.name = name || employee.name;
         employee.salary = salary || employee.salary;
         employee.department = department || employee.department;
         employee.save()
         .then(employee=>{res.status(202).json(employee);})
-        .catch(err=>res.status(500).json({"Message":`Error occured while updating employee's details, Error : ${err}.`}));
+        .catch(err=>{
+            employeeModelErrorHandler(err, res);
+        });
     })
     .catch(err=>{
-        res.status(400).json({"Message":`Error Occured while searching for the employee. ${err}.`});
-    })
+        employeeModelErrorHandler(err, res);
+    });
 };
 
 
@@ -90,13 +78,14 @@ const deleteEmployee = (req, res) => {
     EmployeesModel.deleteOne(filter)
     .then(result=>{
         if(!result.deletedCount){
-            res.status(501).json({"Message":`Not able to delete/find employee with email ${filter.email}.`});
-            return;
+            let err = new Error(`Not able to delete/find employee with email ${filter.email}.`);
+            err.isCustomError = true;
+            throw err;
         }
         res.status(200).json({"Message":`Employee with email ${filter.email} is deleted.`})
     })
     .catch(err=>{
-        res.status(500).json({"Message":`Error Occured while searching for the employee. ${err}.`});
+        employeeModelErrorHandler(err, res);
     })
 };
 
