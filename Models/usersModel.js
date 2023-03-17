@@ -6,11 +6,13 @@ const UsersSchema = new mongoose.Schema({
     username: {
         type: String,
         required: [true, 'Username is required.'],
-        unique: true
+        unique: true,
+        minlength: [4, 'Username should consists of minimum 4 characters']
     },
     password: {
         type: String,
-        required: [true, "Password can't be empty"]
+        required: [true, "Password is required."],
+        minlength: [8, 'Password should consists of minimum 8 characters']
     },
     description: {
         type: String,

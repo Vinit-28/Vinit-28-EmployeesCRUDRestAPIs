@@ -1,36 +1,44 @@
 // Importing Dependencies //
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const pwValidator = new (require('password-validator'))();
 const {UsersModel} = require("../Models/usersModel");
+const {modelsErrorHandler} = require('../ErrorHandlers/validationErrorHandler');
 const saltRounds = 10;
+
+
+// Setting up Password-Validator //
+pwValidator
+.is().min(8)
+.is().max(30)
+.has().uppercase()
+.has().lowercase()
+.has().digits(1)
+.has().symbols(1);
+
+
 
 // APIs //
 const register = (req, res)=>{
     const {username, password, description} = req.body;
-    if( !username || !password ){
-        res.status(400).json({"Message":"Username & Password are required."});
-        return;
+    if( pwValidator.validate(password) ){
+        bcrypt.hash(password, saltRounds)
+        .then(async hashedPwd=>{
+            const newUser = UsersModel({
+                username: username,
+                password: hashedPwd
+            });
+            newUser.description = description || newUser.description;
+            await newUser.save();
+            res.status(200).json({"Message":"User account created successfully."});
+        })
+        .catch(err=>{
+            modelsErrorHandler(err, res);
+        });
     }
-    UsersModel.findOne({username:username})
-    .then(user=>{
-        if( !user ){
-            bcrypt.hash(password, saltRounds)
-            .then(async hashedPwd=>{
-                const newUser = UsersModel({
-                    username: username,
-                    password: hashedPwd
-                });
-                newUser.description = description || newUser.description;
-                await newUser.save();
-                res.status(200).json({"Message":"User account created successfully."});
-            })
-            .catch(err=>{res.status(500).json({"Message":`Some Internal Server Error, ${err}.`})});
-        }
-        else{
-            res.status(400).json({"Message":"Username already exists."});
-        }
-    })
-    .catch(err=>{res.status(500).json({"Message":`Some Internal Server Error, ${err}.`})});
+    else{
+        res.status(400).json({"Message":"Password length should be between 8-30 characters & should consists of atleast 1 lowercase, 1 uppercase & 1 special symbol(#,@,$,&)."});
+    }
 };
 
 

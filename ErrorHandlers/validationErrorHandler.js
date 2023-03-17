@@ -1,13 +1,14 @@
 
 
-const employeeModelErrorHandler = (errObj, res) => {
+const modelsErrorHandler = (errObj, res) => {
     let errMsgs = [], statusCode = 400;
     if( errObj.code ){
-        errMsgs.push('Email Id is already registered.');
+        let key = Object.keys(errObj.keyValue)[0];
+        errMsgs.push(`${key} is already registered.`);
     }
     else if( (errObj.errors instanceof Object) && Object.values(errObj.errors).length ){
         for(let err of Object.values(errObj.errors)){
-            let errMssg = (err.properties && err.properties.message )? err.properties.message : (err.reason)? err.message : undefined;
+            let errMssg = (err.properties && err.properties.message )? err.properties.message : (err.message)? err.message : undefined;
             errMsgs.push(errMssg);
         }
     }
@@ -23,5 +24,5 @@ const employeeModelErrorHandler = (errObj, res) => {
 
 
 module.exports = {
-    employeeModelErrorHandler
+    modelsErrorHandler
 };

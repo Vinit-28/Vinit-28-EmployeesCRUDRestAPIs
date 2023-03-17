@@ -1,6 +1,6 @@
 // Importing Dependencies //
 const {EmployeesModel} = require('../Models/employeesModel');
-const {employeeModelErrorHandler} = require('../ErrorHandlers/validationErrorHandler');
+const {modelsErrorHandler} = require('../ErrorHandlers/validationErrorHandler');
 
 
 // APIs //
@@ -15,7 +15,7 @@ const getAllEmployee = async (req, res)=>{
     EmployeesModel.find({}, {_id:false, name:true, email:true, salary:true})
     .then(data=>{res.status(200).json(data);})
     .catch((err)=>{
-        handleValidationError(err, res);
+        modelsErrorHandler(err, res);
     });
 };
 
@@ -30,7 +30,7 @@ const addEmployee = (req, res)=>{
     newEmployee.save()
     .then(empObj=>{res.status(200).json(empObj)})
     .catch((err)=>{
-        employeeModelErrorHandler(err, res);
+        modelsErrorHandler(err, res);
     });
 };
 
@@ -60,11 +60,11 @@ const updateEmployee = (req, res) => {
         employee.save()
         .then(employee=>{res.status(202).json(employee);})
         .catch(err=>{
-            employeeModelErrorHandler(err, res);
+            modelsErrorHandler(err, res);
         });
     })
     .catch(err=>{
-        employeeModelErrorHandler(err, res);
+        modelsErrorHandler(err, res);
     });
 };
 
@@ -85,7 +85,7 @@ const deleteEmployee = (req, res) => {
         res.status(200).json({"Message":`Employee with email ${filter.email} is deleted.`})
     })
     .catch(err=>{
-        employeeModelErrorHandler(err, res);
+        modelsErrorHandler(err, res);
     })
 };
 
