@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const pwValidator = new (require('password-validator'))();
 const {UsersModel} = require("../Models/usersModel");
 const {modelsErrorHandler} = require('../ErrorHandlers/validationErrorHandler');
+const redisClient = require('../Configs/redisConnection').getRedisClient("Auth");
 const saltRounds = 10;
 
 
@@ -61,34 +62,25 @@ const login = (req, res)=>{
                     username: user.username,
                     description: user.description
                 }, process.env.JWT_SECRET, {expiresIn:'1h', issuer:process.env.JWT_ISSUER});
-                res.cookie('token', authToken, {httpOnly:true, maxAge:60*60*60});
-                // res.cookie('username', username, {httpOnly:true, maxAge:60*60*60});
+                res.cookie('authToken', authToken, {httpOnly:true, maxAge:60*60*60});
                 res.status(200).json({authToken});
             }
             else{
                 res.status(400).json({"Message":"Invalid password."});
             }
-        })
-        .catch(err=>{res.status(500).json({"Message":`Some Internal Server Error, ${err}.`})});
+        });
     })
     .catch(err=>{res.status(500).json({"Message":`Some Internal Server Error, ${err}.`})});
 };
 
 
 const logout = async (req, res)=>{
-    let {token, username} = req.cookies;
-    jwt.verify(token, process.env.JWT_SECRET, {issuer:process.env.JWT_ISSUER}, async (err, user)=>{
-        if(err){
-            res.status(400).json({"Message":`Invalid auth token provided.`});
-            return;
-        }
-        else if( !user || user.username !== username ){
-            res.status(401).json({"Message":"Authentication failed."});
-            return;
-        }
-        res.cookie('token', '', {httpOnly:true, maxAge:1});    
-        res.status(200).json({"Message":"Logged out successfully."})
-    });
+    let token = req.headers['authorization'] || req.cookies.authToken;
+    let now = Math.floor(Date.now()/1000);
+    let tokenInvalidity = req.decodedJWTObject.exp - now;
+    redisClient.set(token, 1, {EX: tokenInvalidity});
+    res.cookie('authToken', '', {httpOnly:true, maxAge:1});    
+    res.status(200).json({"Message":"Logged out successfully."});
 }
 
 

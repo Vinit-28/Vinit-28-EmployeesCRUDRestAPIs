@@ -20,6 +20,7 @@
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^6.9.2",
     "password-validator": "^5.3.0",
+    "redis": "^4.6.5",
     "validator": "^13.9.0"
   }
 }

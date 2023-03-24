@@ -1,6 +1,6 @@
 // Importing Dependencies //
 const mongoose = require('mongoose');
-const DB_CONNECTION = require('../Configs/DB_Connection').getDBConnectionObject(process.env.DB_NAME);
+const DB_CONNECTION = require('../Configs/dbConnection').getDBConnectionObject(process.env.DB_NAME);
 const {isEmail} = require('validator');
 
 
