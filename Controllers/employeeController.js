@@ -11,7 +11,7 @@ const getEmployee = async (req, res)=>{
 };
 
 
-const getAllEmployee = async (req, res)=>{
+const getAllEmployees = async (req, res)=>{
     EmployeesModel.find({}, {_id:false, name:true, email:true, salary:true})
     .then(data=>{res.status(200).json(data);})
     .catch((err)=>{
@@ -92,7 +92,7 @@ const deleteEmployee = (req, res) => {
 
 module.exports = {
     getEmployee,
-    getAllEmployee,
+    getAllEmployees,
     addEmployee,
     updateEmployee,
     deleteEmployee
