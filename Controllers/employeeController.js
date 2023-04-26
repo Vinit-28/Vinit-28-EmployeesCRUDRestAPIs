@@ -1,22 +1,69 @@
 // Importing Dependencies //
 const {EmployeesModel} = require('../Models/employeesModel');
 const {modelsErrorHandler} = require('../ErrorHandlers/validationErrorHandler');
+const redis = require('../Configs/redisConnection');
+var redisClient = null;
+
+
+// Connecting with Redis Server //
+redis.getRedisClient("Employees Conrtoller")
+.then((client)=>{
+    redisClient = client;
+});
+
+
+// Utility Functions //
+const clearCache = (...keys)=>{
+    for(let key of keys){
+        redisClient.set(key, '', {EX: 60});
+    }
+}
 
 
 // APIs //
 const getEmployee = async (req, res)=>{
     let email = req.body.email || '', name = req.body.name || '';
-    let data = await EmployeesModel.find({$or:[{name:name}, {email:email}]}).exec();
+    let cachedDataEmail = await redisClient.get(email);
+    let cachedDataName = await redisClient.get(name);
+    let data = null;
+
+    if( cachedDataEmail || cachedDataName ){
+        console.log("Using Cached data.");
+        data = JSON.parse(cachedDataEmail || cachedDataName);
+    }
+    else{
+        data = await EmployeesModel.find({$or:[{name:name}, {email:email}]}).exec();
+        console.log("Caching data.")
+        if( email )
+            redisClient.set(email, JSON.stringify(data), {EX: 60});
+        if( name )
+            redisClient.set(name, JSON.stringify(data), {EX: 60});
+    }
+
     return res.status(200).json(data);
 };
 
 
 const getAllEmployees = async (req, res)=>{
-    EmployeesModel.find({}, {_id:false, name:true, email:true, salary:true})
-    .then(data=>{res.status(200).json(data);})
-    .catch((err)=>{
-        modelsErrorHandler(err, res);
-    });
+    const key = 'allEmployees';
+    let cachedData = await redisClient.get(key);
+    
+    if( cachedData ){
+        console.log("Using Cached data.");
+        let data = JSON.parse(cachedData);
+        res.status(200).json(data);
+    }
+    else{        
+        EmployeesModel.find({}, {_id:false, name:true, email:true, salary:true})
+        .then(data=>{
+            console.log("Caching data.")
+            redisClient.set(key, JSON.stringify(data), {EX: 60});
+            res.status(200).json(data);
+        })
+        .catch((err)=>{
+            modelsErrorHandler(err, res);
+        });
+    }
 };
 
 
@@ -28,7 +75,10 @@ const addEmployee = (req, res)=>{
         salary: req.body.salary,
     });
     newEmployee.save()
-    .then(empObj=>{res.status(200).json(empObj)})
+    .then(empObj=>{
+        clearCache('allEmployees');
+        res.status(200).json(empObj);
+    })
     .catch((err)=>{
         modelsErrorHandler(err, res);
     });
@@ -58,7 +108,10 @@ const updateEmployee = (req, res) => {
         employee.salary = salary || employee.salary;
         employee.department = department || employee.department;
         employee.save()
-        .then(employee=>{res.status(202).json(employee);})
+        .then(employee=>{
+            clearCache('allEmployees', email, name);
+            res.status(202).json(employee);
+        })
         .catch(err=>{
             modelsErrorHandler(err, res);
         });
@@ -69,24 +122,35 @@ const updateEmployee = (req, res) => {
 };
 
 
-const deleteEmployee = (req, res) => {
+const deleteEmployee = async (req, res) => {
     let filter = {email:req.body.email};
     if( !filter.email ){
         req.status(400).json({"Message":"Please provide email id."});
         return;
     }
-    EmployeesModel.deleteOne(filter)
-    .then(result=>{
-        if(!result.deletedCount){
-            let err = new Error(`Not able to delete/find employee with email ${filter.email}.`);
+    employee = await EmployeesModel.findOne(filter)
+    .then(employee=>{
+        if( !employee ){
+            let err = new Error(`Not able to find employee with email ${filter.email}.`);
             err.isCustomError = true;
             throw err;
         }
-        res.status(200).json({"Message":`Employee with email ${filter.email} is deleted.`})
+        else{
+            EmployeesModel.deleteOne(filter)
+            .then(result=>{
+                if(!result.deletedCount){
+                    let err = new Error(`Not able to delete employee with email ${filter.email}.`);
+                    err.isCustomError = true;
+                    throw err;
+                }
+                clearCache('allEmployees', employee.email, employee.name);
+                res.status(200).json({"Message":`Employee with email ${filter.email} is deleted.`})
+            });
+        }
     })
     .catch(err=>{
         modelsErrorHandler(err, res);
-    })
+    });
 };
 
 

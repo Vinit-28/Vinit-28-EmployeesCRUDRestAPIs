@@ -4,8 +4,16 @@ const jwt = require('jsonwebtoken');
 const pwValidator = new (require('password-validator'))();
 const {UsersModel} = require("../Models/usersModel");
 const {modelsErrorHandler} = require('../ErrorHandlers/validationErrorHandler');
-const redisClient = require('../Configs/redisConnection').getRedisClient("Auth");
+const redis = require('../Configs/redisConnection');
+var redisClient = null;
 const saltRounds = 10;
+
+
+// Connecting with Redis Server //
+redis.getRedisClient("Auth")
+.then((client)=>{
+    redisClient = client;
+});
 
 
 // Setting up Password-Validator //

@@ -1,12 +1,19 @@
 // Importing Dependencies //
 const { compareSync } = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const redisClient = require('../Configs/redisConnection').getRedisClient("Auth Middleware");
+const redis = require('../Configs/redisConnection');
+var redisClient = null;
 
 
-const authenticateUser = (req, res, next)=>{
+// Connecting with Redis Server //
+redis.getRedisClient("Auth Middleware")
+.then((client)=>{
+    redisClient = client;
+});
+
+
+const authenticateUser = async (req, res, next)=>{
     let token = req.headers['authorization'] || req.cookies.authToken;
-    // let token = req.cookies.token;
     if( !token ){
         res.status(400).json({"Message":"Authentication Token Missing."});
     }
@@ -14,6 +21,7 @@ const authenticateUser = (req, res, next)=>{
         token = token.replace("Bearer ", "");
         jwt.verify(token, process.env.JWT_SECRET, {issuer:process.env.JWT_ISSUER}, async (err, decodedObject)=>{
             if(err){
+                console.log("Error : ", err);
                 res.status(401).json({"Message":`You're Unauthorized.`});
             }
             else{

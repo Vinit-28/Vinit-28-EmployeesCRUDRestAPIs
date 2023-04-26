@@ -2,6 +2,7 @@
 require('dotenv').config();
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const responseTime = require('response-time');
 // Importing Routers //
 const employeeRouter = require('./Routers/employeeRouter');
 const authRouter = require('./Routers/authRouter');
@@ -17,6 +18,7 @@ const PORT = process.env.PORT;
 // Pre-defined Middlewares //
 app.use(express.urlencoded({extended: false}));
 app.use(cookieParser());
+// app.use(responseTime());
 
 
 // Routes without authentication //
